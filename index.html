@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Diagnóstico de Valor | Ticketmaster México</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --tm-blue: #0050a4;
+      --tm-dark: #06172f;
+      --tm-cyan: #00aeef;
+      --accent: #ff4f1f;
+      --ink: #111827;
+      --muted: #6b7280;
+      --soft: #f5f7fb;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --success: #10b981;
+      --card: rgba(255,255,255,.88);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Roboto', sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(0,174,239,.18), transparent 28rem),
+        radial-gradient(circle at top right, rgba(255,79,31,.12), transparent 24rem),
+        linear-gradient(180deg, #f8fbff 0%, #eef3fb 45%, #ffffff 100%);
+      color: var(--ink);
+    }
+
+    .glass {
+      background: rgba(255,255,255,.80);
+      backdrop-filter: blur(18px);
+      border: 1px solid rgba(255,255,255,.72);
+      box-shadow: 0 24px 80px rgba(6,23,47,.08);
+    }
+
+    .dark-panel {
+      background:
+        radial-gradient(circle at 20% 10%, rgba(0,174,239,.22), transparent 28rem),
+        radial-gradient(circle at 90% 20%, rgba(255,79,31,.16), transparent 24rem),
+        linear-gradient(135deg, #06172f 0%, #0b2347 55%, #06172f 100%);
+      color: white;
+    }
+
+    .pill {
+      border: 1px solid rgba(0,80,164,.16);
+      background: rgba(0,80,164,.06);
+      color: var(--tm-blue);
+    }
+
+    .risk-pill { background: rgba(239,68,68,.10); color: #b91c1c; }
+    .warn-pill { background: rgba(245,158,11,.12); color: #92400e; }
+    .ok-pill { background: rgba(16,185,129,.10); color: #047857; }
+    .neutral-pill { background: rgba(107,114,128,.10); color: #374151; }
+
+    .topic-btn {
+      transition: all .25s ease;
+      border: 1px solid rgba(17,24,39,.08);
+      background: white;
+    }
+    .topic-btn.active {
+      background: var(--tm-blue);
+      color: white;
+      transform: translateY(-2px);
+      box-shadow: 0 18px 45px rgba(0,80,164,.25);
+    }
+    .topic-panel { display: none; animation: fadeIn .35s ease; }
+    .topic-panel.active { display: block; }
+
+    .channel-card, .evidence-card, .benchmark-card {
+      transition: all .25s ease;
+      border: 1px solid rgba(17,24,39,.08);
+    }
+    .channel-card:hover, .evidence-card:hover, .benchmark-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 22px 50px rgba(6,23,47,.10);
+    }
+
+    .timeline::before {
+      content: "";
+      position: absolute;
+      left: 1rem;
+      top: .5rem;
+      bottom: .5rem;
+      width: 2px;
+      background: linear-gradient(var(--tm-cyan), var(--accent));
+    }
+
+    .journey-step {
+      background: white;
+      border: 1px solid rgba(17,24,39,.08);
+      position: relative;
+    }
+    .journey-step:not(:last-child)::after {
+      content: "";
+      position: absolute;
+      right: -1rem;
+      top: 50%;
+      width: 2rem;
+      height: 2px;
+      background: rgba(0,80,164,.25);
+    }
+    @media (max-width: 768px) {
+      .journey-step:not(:last-child)::after { display: none; }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .floating-nav {
+      backdrop-filter: blur(16px);
+      background: rgba(255,255,255,.88);
+      border-bottom: 1px solid rgba(17,24,39,.08);
+    }
+
+    .mini-metric {
+      background: rgba(255,255,255,.10);
+      border: 1px solid rgba(255,255,255,.15);
+    }
+  </style>
+</head>
+<body>
+  <nav class="floating-nav sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-5 py-3 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-4">
+        <div class="flex items-center gap-2 pr-4 border-r border-gray-200">
+          <img src="https://kerv.com/app/uploads/GENESYS_logo_FullColor_rgb_png-1024x189.png" alt="Genesys" class="h-8 md:h-9 w-auto object-contain" />
+        </div>
+        <div>
+          <p class="text-sm font-extrabold leading-tight">Diagnóstico de Valor</p>
+          <p class="text-xs text-gray-500">Ticketmaster México · CX, demanda digital y continuidad</p>
+        </div>
+      </div>
+      <div class="hidden md:flex items-center gap-5 text-sm font-semibold text-gray-600">
+        <a href="#contexto" class="hover:text-[#0050a4]">Contexto</a>
+        <a href="#percepcion" class="hover:text-[#0050a4]">Percepción</a>
+        <a href="#journey" class="hover:text-[#0050a4]">Journey</a>
+        <a href="#benchmark" class="hover:text-[#0050a4]">Benchmark</a>
+        <a href="#genesys" class="hover:text-[#0050a4]">Genesys</a>
+        <a href="#casos" class="hover:text-[#0050a4]">Casos</a>
+        <a href="#fuentes" class="hover:text-[#0050a4]">Fuentes</a>
+        <a href="#ruta" class="hover:text-[#0050a4]">Ruta</a>
+      </div>
+      <a href="https://www.ticketmaster.com.mx/" target="_blank" class="hidden sm:inline-flex px-4 py-2 rounded-full bg-[#06172f] text-white text-sm font-bold hover:bg-[#0050a4] transition">Sitio público</a>
+    </div>
+  </nav>
+
+  <header class="max-w-7xl mx-auto px-5 py-14 md:py-20">
+    <div class="dark-panel rounded-[2rem] p-8 md:p-12 overflow-hidden relative">
+      <div class="absolute -right-20 -top-20 w-72 h-72 rounded-full bg-white/10 blur-2xl"></div>
+      <div class="absolute -left-16 bottom-0 w-64 h-64 rounded-full bg-[#00aeef]/20 blur-2xl"></div>
+
+      <div class="relative grid lg:grid-cols-2 gap-10 items-center">
+        <div>
+          <span class="inline-flex px-4 py-2 rounded-full bg-white/10 border border-white/15 text-sm font-bold text-[#c7ecff]">Diagnóstico de Valor · Lectura ejecutiva</span>
+          <h1 class="mt-6 text-4xl md:text-6xl font-black tracking-tight leading-[1.02]">Cuando la compra es emocional, la experiencia de soporte también define la confianza.</h1>
+          <p class="mt-6 text-lg text-blue-100 leading-relaxed max-w-2xl">Ticketmaster México opera en momentos de alta expectativa: preventas, ventas de alta demanda, accesos, cambios, cancelaciones y reembolsos. En esos puntos, el cliente no evalúa solo la transacción; evalúa transparencia, control, respuesta y continuidad.</p>
+          <div class="mt-8 flex flex-wrap gap-3">
+            <span class="px-4 py-2 rounded-full bg-red-500/15 text-red-100 border border-red-300/20 font-bold text-sm">Dolor: incertidumbre en picos de demanda</span>
+            <span class="px-4 py-2 rounded-full bg-orange-500/15 text-orange-100 border border-orange-300/20 font-bold text-sm">Brecha: soporte inmediato limitado</span>
+            <span class="px-4 py-2 rounded-full bg-cyan-500/15 text-cyan-100 border border-cyan-300/20 font-bold text-sm">Oportunidad: continuidad del journey</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div class="mini-metric rounded-3xl p-5">
+            <p class="text-4xl font-black">3</p>
+            <p class="mt-2 text-sm text-blue-100">Momentos críticos: preventa, venta y postventa</p>
+          </div>
+          <div class="mini-metric rounded-3xl p-5">
+            <p class="text-4xl font-black">21</p>
+            <p class="mt-2 text-sm text-blue-100">Días como referencia de resolución en Conciliaexprés</p>
+          </div>
+          <div class="mini-metric rounded-3xl p-5">
+            <p class="text-4xl font-black">862</p>
+            <p class="mt-2 text-sm text-blue-100">Denuncias reportadas por medios entre 2019-2025</p>
+          </div>
+          <div class="mini-metric rounded-3xl p-5">
+            <p class="text-4xl font-black">0</p>
+            <p class="mt-2 text-sm text-blue-100">Chatbot/WhatsApp visible en la auditoría inicial</p>
+          </div>
+          <div class="col-span-2 glass rounded-3xl p-6 text-[#06172f]">
+            <p class="text-sm font-bold uppercase tracking-wide text-[#0050a4]">Lectura central</p>
+            <p class="mt-2 text-2xl font-black">La oportunidad no es “atender más casos”; es reducir incertidumbre antes de que se convierta en queja, abandono o exposición pública.</p>
+            <p class="mt-3 text-sm text-gray-600">El análisis se utiliza como marco de conversación para revisar señales, canales, automatización, analítica y escalamiento humano.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-5 pb-20 space-y-20">
+    <section id="contexto" class="grid lg:grid-cols-3 gap-6">
+      <div class="lg:col-span-1">
+        <p class="text-sm font-black text-[#0050a4] uppercase tracking-wider">Contexto ejecutivo</p>
+        <h2 class="mt-3 text-3xl md:text-4xl font-black tracking-tight">Un diagnóstico para entender fricción, no para señalar culpables.</h2>
+        <p class="mt-4 text-gray-600 leading-relaxed">El objetivo es identificar dónde se rompe la confianza del cliente y qué capacidades podrían ayudar a elevar la experiencia sin forzar una lectura comercial directa.</p>
+      </div>
+      <div class="lg:col-span-2 grid md:grid-cols-2 gap-4">
+        <article class="glass rounded-3xl p-6">
+          <span class="pill px-3 py-1 rounded-full text-xs font-black">Naturaleza del negocio</span>
+          <h3 class="mt-4 text-xl font-black">Alta demanda, baja tolerancia a errores</h3>
+          <p class="mt-2 text-gray-600">En eventos masivos, el cliente percibe cada espera, error de pago o falta de respuesta como pérdida de oportunidad.</p>
+        </article>
+        <article class="glass rounded-3xl p-6">
+          <span class="warn-pill px-3 py-1 rounded-full text-xs font-black">Momento emocional</span>
+          <h3 class="mt-4 text-xl font-black">El boleto no es solo un producto</h3>
+          <p class="mt-2 text-gray-600">La compra está ligada a expectativa, pertenencia, urgencia y miedo a quedarse fuera.</p>
+        </article>
+        <article class="glass rounded-3xl p-6">
+          <span class="risk-pill px-3 py-1 rounded-full text-xs font-black">Riesgo reputacional</span>
+          <h3 class="mt-4 text-xl font-black">La fricción se vuelve pública</h3>
+          <p class="mt-2 text-gray-600">Cuando los canales de ayuda no resuelven rápido, redes sociales se convierten en canal de escalación y amplificación.</p>
+        </article>
+        <article class="glass rounded-3xl p-6">
+          <span class="ok-pill px-3 py-1 rounded-full text-xs font-black">Oportunidad CX</span>
+          <h3 class="mt-4 text-xl font-black">Diseñar continuidad</h3>
+          <p class="mt-2 text-gray-600">El valor está en conectar señales de intención, compra, problema, emoción y resolución en una misma experiencia, de forma que la organización pueda observar y responder con mayor consistencia.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="percepcion" class="glass rounded-[2rem] p-6 md:p-8">
+      <div class="grid lg:grid-cols-5 gap-8 items-start">
+        <div class="lg:col-span-2">
+          <p class="text-sm font-black text-[#0050a4] uppercase tracking-wider">Percepción pública y señales de fricción</p>
+          <h2 class="mt-3 text-3xl font-black">Lo que el mercado ya conversa sobre la experiencia.</h2>
+          <p class="mt-4 text-gray-600 leading-relaxed">La evidencia pública sugiere que la percepción del cliente se concentra en tres temas: acceso justo a boletos, transparencia de cargos/condiciones y resolución postventa.</p>
+          <div class="mt-6 h-[300px]">
+            <canvas id="perceptionChart"></canvas>
+          </div>
+        </div>
+        <div class="lg:col-span-3 grid gap-4">
+          <article class="evidence-card bg-white rounded-3xl p-5">
+            <span class="risk-pill px-3 py-1 rounded-full text-xs font-black">Preventa / venta</span>
+            <h3 class="mt-3 text-xl font-black">Fallas, saturación y sensación de competencia desigual</h3>
+            <p class="mt-2 text-gray-600">Medios han documentado preventas con sesiones interrumpidas, errores de pago y usuarios que no logran comprar aun entrando a tiempo. Este tipo de fricción afecta la percepción de justicia del proceso.</p>
+            <a class="inline-flex mt-4 text-sm font-black text-[#0050a4] hover:underline" target="_blank" href="https://elpais.com/mexico/2026-05-21/a-la-guerra-digital-por-un-boleto-para-la-final-de-pumas-vs-cruz-azul.html">Fuente: El País · fallas en venta digital y preventa</a>
+          </article>
+          <article class="evidence-card bg-white rounded-3xl p-5">
+            <span class="warn-pill px-3 py-1 rounded-full text-xs font-black">Postventa</span>
+            <h3 class="mt-3 text-xl font-black">Reembolsos, cargos y reclamos como foco recurrente</h3>
+            <p class="mt-2 text-gray-600">La incorporación a Conciliaexprés de Profeco muestra un esfuerzo formal por agilizar quejas relacionadas con compra, cargos, acceso a eventos y reembolsos.</p>
+            <a class="inline-flex mt-4 text-sm font-black text-[#0050a4] hover:underline" target="_blank" href="https://www.gob.mx/profeco/prensa/291010">Fuente: Profeco · incorporación a Conciliaexprés</a>
+          </article>
+          <article class="evidence-card bg-white rounded-3xl p-5">
+            <span class="neutral-pill px-3 py-1 rounded-full text-xs font-black">Canales digitales</span>
+            <h3 class="mt-3 text-xl font-black">El soporte público observado depende de formularios y artículos</h3>
+            <p class="mt-2 text-gray-600">El centro de ayuda guía al usuario hacia artículos o formularios. El reto no es tener información, sino ofrecer resolución contextual cuando el cliente está en un momento crítico.</p>
+            <a class="inline-flex mt-4 text-sm font-black text-[#0050a4] hover:underline" target="_blank" href="https://help.ticketmaster.com.mx/hc/es-mx/articles/7003373287569--C%C3%B3mo-contactarnos">Fuente: Ticketmaster MX · cómo contactarnos</a>
+          </article>
+          <article class="evidence-card bg-white rounded-3xl p-5">
+            <span class="warn-pill px-3 py-1 rounded-full text-xs font-black">Botón de ayuda</span>
+            <h3 class="mt-3 text-xl font-black">Una iniciativa correcta con un reto de confianza y adopción</h3>
+            <p class="mt-2 text-gray-600">Ticketmaster ha promovido su botón de ayuda como una vía para atención al cliente. La oportunidad no está en cuestionar la intención del canal, sino en fortalecer la experiencia alrededor de él: expectativa clara, respuesta contextual, seguimiento visible y transición fluida cuando el autoservicio no basta.</p>
+            <p class="mt-3 text-sm text-gray-500">En publicaciones sociales de marca, las reacciones de usuarios pueden funcionar como termómetro cualitativo: cuando hay comentarios críticos, suelen reflejar necesidad de mayor claridad, confianza y trazabilidad en la resolución.</p>
+            <a class="inline-flex mt-4 text-sm font-black text-[#0050a4] hover:underline" target="_blank" href="https://www.tiktok.com/@ticketmaster_mx/video/7395622105770986757?lang=es">Fuente cualitativa: TikTok Ticketmaster MX · botón de ayuda</a>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="journey">
+      <div class="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+        <div>
+          <p class="text-sm font-black text-[#0050a4] uppercase tracking-wider">Lectura por etapa del cliente</p>
+          <h2 class="mt-3 text-3xl md:text-4xl font-black">Preventa, venta y postventa tienen dolores distintos.</h2>
+        </div>
+        <p class="max-w-2xl text-gray-600">La experiencia no debe evaluarse solo por disponibilidad de canales, sino por la capacidad de cada canal para resolver el problema correcto en el momento correcto.</p>
+      </div>
+
+      <div class="grid md:grid-cols-3 gap-4">
+        <article class="journey-step rounded-3xl p-6">
+          <span class="pill px-3 py-1 rounded-full text-xs font-black">01 · Preventa</span>
+          <h3 class="mt-4 text-2xl font-black">Expectativa y ansiedad</h3>
+          <p class="mt-3 text-gray-600">El usuario necesita claridad: horarios, requisitos, métodos de pago, fila, códigos, disponibilidad y reglas.</p>
+          <div class="mt-5 p-4 rounded-2xl bg-red-50 text-red-900 text-sm font-semibold">Riesgo: sensación de opacidad o inequidad si no entiende por qué no logra comprar.</div>
+        </article>
+        <article class="journey-step rounded-3xl p-6">
+          <span class="pill px-3 py-1 rounded-full text-xs font-black">02 · Venta</span>
+          <h3 class="mt-4 text-2xl font-black">Velocidad y confianza</h3>
+          <p class="mt-3 text-gray-600">El usuario requiere estabilidad, confirmaciones claras, recuperación ante errores y asistencia inmediata si el pago falla.</p>
+          <div class="mt-5 p-4 rounded-2xl bg-orange-50 text-orange-900 text-sm font-semibold">Riesgo: abandono, doble cargo percibido o migración a redes para pedir ayuda.</div>
+        </article>
+        <article class="journey-step rounded-3xl p-6">
+          <span class="pill px-3 py-1 rounded-full text-xs font-black">03 · Postventa</span>
+          <h3 class="mt-4 text-2xl font-black">Resolución y tranquilidad</h3>
+          <p class="mt-3 text-gray-600">El usuario busca estatus, reembolso, transferencia, acceso, cambios de evento y soporte antes de llegar al venue.</p>
+          <div class="mt-5 p-4 rounded-2xl bg-blue-50 text-blue-900 text-sm font-semibold">Riesgo: el problema escala cuando no hay seguimiento visible ni trazabilidad.</div>
+        </article>
+      </div>
+    </section>
+
+    <section class="glass rounded-[2rem] p-6 md:p-8">
+      <div class="grid lg:grid-cols-5 gap-8 items-center">
+        <div class="lg:col-span-2">
+          <p class="text-sm font-black text-[#0050a4] uppercase tracking-wider">Matriz de madurez observada</p>
+          <h2 class="mt-3 text-3xl font-black">La brecha principal está en asistencia contextual y continuidad.</h2>
+          <p class="mt-4 text-gray-600 leading-relaxed">La base de ayuda y los formularios son útiles, pero no sustituyen una experiencia capaz de detectar intención, priorizar urgencia, conservar contexto y anticipar fricción.</p>
+        </div>
+        <div class="lg:col-span-3 h-[340px]">
+          <canvas id="maturityChart"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <section id="benchmark">
+      <div class="mb-8">
+        <p class="text-sm font-black text-[#0050a4] uppercase tracking-wider">Cómo lo están resolviendo otros grandes del entretenimiento</p>
+        <h2 class="mt-3 text-3xl md:text-4xl font-black">La industria está moviéndose de “vender boletos” a “gestionar confianza en tiempo real”.</h2>
+        <p class="mt-4 text-gray-600 max-w-4xl">Los líderes de ticketing, venues y experiencias live están combinando control de tráfico, anti-bots, comunicación transparente, soporte digital contextual y automatización de resolución para proteger la experiencia del fan.</p>
+      </div>
+
+      <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <article class="benchmark-card bg-white rounded-3xl p-5">
+          <div class="text-3xl">🚦</div>
+          <h3 class="mt-4 font-black text-lg">Filas virtuales claras</h3>
+          <p class="mt-2 text-sm text-gray-600">Salas de espera con reglas claras para reducir ansiedad y evitar sobrecarga en eventos de alta demanda.</p>
+          <a class="inline-flex mt-3 text-xs font-black text-[#0050a4] hover:underline" target="_blank" href="https://support.axs.com/hc/en-us/articles/200745935-What-s-a-Waiting-Room">Fuente: AXS · waiting room</a>
+        </article>
+        <article class="benchmark-card bg-white rounded-3xl p-5">
+          <div class="text-3xl">🛡️</div>
+          <h3 class="mt-4 font-black text-lg">Anti-bot + verificación</h3>
+          <p class="mt-2 text-sm text-gray-600">Controles de tráfico, validación de usuarios, boletos móviles seguros y mecanismos para limitar fraude y reventa abusiva.</p>
+        </article>
+        <article class="benchmark-card bg-white rounded-3xl p-5">
+          <div class="text-3xl">💬</div>
+          <h3 class="mt-4 font-black text-lg">Soporte conversacional</h3>
+          <p class="mt-2 text-sm text-gray-600">Chat o asistencia digital conectada a cuenta, orden y evento para evitar que el cliente repita contexto.</p>
+          <a class="inline-flex mt-3 text-xs font-black text-[#0050a4] hover:underline" target="_blank" href="https://support.axs.com/hc/en-us/articles/360033079634-How-do-I-contact-Fan-Support">Fuente: AXS · live chat Fan Support</a>
+        </article>
+        <article class="benchmark-card bg-white rounded-3xl p-5">
+          <div class="text-3xl">📲</div>
+          <h3 class="mt-4 font-black text-lg">Comunicación proactiva</h3>
+          <p class="mt-2 text-sm text-gray-600">Alertas sobre disponibilidad, cambios, acceso, reembolsos, horarios y pasos siguientes antes de que el usuario pregunte.</p>
+        </article>
+        <article class="benchmark-card bg-white rounded-3xl p-5">
+          <div class="text-3xl">🤖</div>
+          <h3 class="mt-4 font-black text-lg">AI agents de servicio</h3>
+          <p class="mt-2 text-sm text-gray-600">Automatización para resolver casos frecuentes, reducir escalaciones y sostener calidad durante picos de demanda.</p>
+          <a class="inline-flex mt-3 text-xs font-black text-[#0050a4] hover:underline" target="_blank" href="https://aws.amazon.com/blogs/architecture/build-a-virtual-waiting-room-with-amazon-dynamodb-and-aws-lambda-at-seatgeek/">Fuente: AWS · SeatGeek y virtual waiting room</a>
+        </article>
+        <article class="benchmark-card bg-white rounded-3xl p-5">
+          <div class="text-3xl">📊</div>
+          <h3 class="mt-4 font-black text-lg">Journey analytics</h3>
+          <p class="mt-2 text-sm text-gray-600">Monitoreo de puntos de abandono, errores, temas frecuentes y sentimiento para corregir la experiencia por etapa.</p>
+        </article>
+        <article class="benchmark-card bg-white rounded-3xl p-5">
+          <div class="text-3xl">🔁</div>
+          <h3 class="mt-4 font-black text-lg">Continuidad omnicanal</h3>
+          <p class="mt-2 text-sm text-gray-600">El caso conserva historial cuando pasa de self-service a chat, social, email o agente humano.</p>
+        </article>
+        <article class="benchmark-card bg-white rounded-3xl p-5">
+          <div class="text-3xl">🎟️</div>
+          <h3 class="mt-4 font-black text-lg">Postventa trazable</h3>
+          <p class="mt-2 text-sm text-gray-600">Estatus de solicitud, evidencia, tiempos esperados y resolución documentada para reducir incertidumbre.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="grid lg:grid-cols-12 gap-6 items-start">
+      <div class="lg:col-span-4 glass rounded-[2rem] p-6 sticky top-24">
+        <p class="text-sm font-black text-[#0050a4] uppercase tracking-wider">Diagnóstico FTS</p>
+        <h2 class="mt-3 text-3xl font-black">Del síntoma visible al costo invisible.</h2>
+        <p class="mt-4 text-gray-600 leading-relaxed">El cliente ve una fila, un error o un formulario. El negocio puede estar viendo algo más profundo: pérdida de confianza, fuga de intención y carga operativa acumulada.</p>
+      </div>
+      <div class="lg:col-span-8 space-y-4 relative timeline pl-10">
+        <article class="glass rounded-3xl p-6 relative">
+          <span class="absolute -left-[2.05rem] top-7 w-8 h-8 rounded-full bg-red-500 border-4 border-white"></span>
+          <span class="risk-pill px-3 py-1 rounded-full text-xs font-black">Lagging Indicator</span>
+          <h3 class="mt-3 text-xl font-black">Quejas, reclamos públicos y presión postventa</h3>
+          <p class="mt-2 text-gray-600">Cuando el usuario no encuentra respuesta inmediata, la fricción puede transformarse en contacto manual, reclamo externo o exposición en redes.</p>
+        </article>
+        <article class="glass rounded-3xl p-6 relative">
+          <span class="absolute -left-[2.05rem] top-7 w-8 h-8 rounded-full bg-orange-400 border-4 border-white"></span>
+          <span class="warn-pill px-3 py-1 rounded-full text-xs font-black">Leaning Indicator</span>
+          <h3 class="mt-3 text-xl font-black">Migración del cliente a canales no diseñados para resolver</h3>
+          <p class="mt-2 text-gray-600">Redes sociales y comentarios públicos funcionan como válvula de escape cuando el journey no ofrece asistencia contextual.</p>
+        </article>
+        <article class="glass rounded-3xl p-6 relative">
+          <span class="absolute -left-[2.05rem] top-7 w-8 h-8 rounded-full bg-[#0050a4] border-4 border-white"></span>
+          <span class="pill px-3 py-1 rounded-full text-xs font-black">Leading Indicator</span>
+          <h3 class="mt-3 text-xl font-black">Falta de orquestación entre intención, compra y soporte</h3>
+          <p class="mt-2 text-gray-600">Si el sistema no conecta señales de navegación, compra, error, cuenta, evento y caso, la organización solo reacciona después del problema.</p>
+        </article>
+        <article class="glass rounded-3xl p-6 relative">
+          <span class="absolute -left-[2.05rem] top-7 w-8 h-8 rounded-full bg-[#ff4f1f] border-4 border-white"></span>
+          <span class="bg-[#ff4f1f]/10 text-[#b43316] px-3 py-1 rounded-full text-xs font-black">Unknown Value</span>
+          <h3 class="mt-3 text-xl font-black">Confianza recuperable antes de que se pierda</h3>
+          <p class="mt-2 text-gray-600">El valor potencial está en intervenir antes de que la frustración escale: explicar, acompañar, resolver o redirigir con contexto.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="genesys">
+      <div class="mb-8">
+        <p class="text-sm font-black text-[#0050a4] uppercase tracking-wider">Capacidades de referencia para contrastar el diagnóstico</p>
+        <h2 class="mt-3 text-3xl md:text-4xl font-black">De fricción aislada a experiencia observable y continua.</h2>
+        <p class="mt-4 text-gray-600 max-w-4xl">Esta sección no plantea una recomendación cerrada. Presenta capacidades tecnológicas que pueden servir como referencia para contrastar el estado actual, validar brechas y discutir qué nivel de continuidad, automatización y trazabilidad sería deseable para el journey de Ticketmaster.</p>
+        <p class="mt-3 text-gray-600 max-w-4xl">En el caso específico del botón de ayuda, el punto de análisis es si este punto de entrada logra reconocer intención, conectar con la orden o evento, ofrecer respuestas basadas en conocimiento, conservar historial y escalar con contexto cuando el autoservicio no es suficiente.</p>
+      </div>
+
+      <div class="grid lg:grid-cols-12 gap-6">
+        <div class="lg:col-span-4 space-y-3">
+          <button class="topic-btn active w-full text-left rounded-2xl p-4 font-black" data-topic="gjourney">1. Observabilidad del journey</button>
+          <button class="topic-btn w-full text-left rounded-2xl p-4 font-black" data-topic="gassist">2. Asistencia contextual</button>
+          <button class="topic-btn w-full text-left rounded-2xl p-4 font-black" data-topic="gmsg">3. Mensajería y continuidad</button>
+          <button class="topic-btn w-full text-left rounded-2xl p-4 font-black" data-topic="gsocial">4. Gestión de social care</button>
+          <button class="topic-btn w-full text-left rounded-2xl p-4 font-black" data-topic="grouting">5. Priorización y escalamiento</button>
+        </div>
+        <div class="lg:col-span-8 glass rounded-[2rem] p-6 md:p-8 min-h-[390px]">
+          <div class="topic-panel active" id="gjourney">
+            <span class="pill px-3 py-1 rounded-full text-xs font-black">Journey Management + Predictive Engagement</span>
+            <h3 class="mt-5 text-3xl font-black">Detectar intención, abandono y fricción antes de que escalen.</h3>
+            <p class="mt-4 text-gray-600 leading-relaxed">Las capacidades de journey management permiten analizar journeys digitales, observar comportamiento en propiedades web, identificar probabilidad de resultado y activar el siguiente paso más adecuado. Para Ticketmaster, el contraste se puede hacer sobre señales como navegación hacia ayuda, error de pago, abandono de compra o búsqueda de reembolso.</p>
+            <div class="mt-6 grid md:grid-cols-3 gap-3">
+              <div class="bg-white rounded-2xl p-4 font-bold">Abandono de compra</div>
+              <div class="bg-white rounded-2xl p-4 font-bold">Next-best action</div>
+              <div class="bg-white rounded-2xl p-4 font-bold">Analytics por etapa</div>
+            </div>
+            <div class="mt-5 flex flex-wrap gap-3">
+              <a class="text-sm font-black text-[#0050a4] hover:underline" target="_blank" href="https://www.genesys.com/capabilities/customer-journey-management">Fuente: Genesys · Customer Journey Management</a>
+              <a class="text-sm font-black text-[#0050a4] hover:underline" target="_blank" href="https://all.docs.genesys.com/Solution/GenesysCloudPredictiveEngagementSolutions">Fuente: Genesys Docs · Predictive Engagement</a>
+            </div>
+          </div>
+          <div class="topic-panel" id="gassist">
+            <span class="pill px-3 py-1 rounded-full text-xs font-black">AI + Automation</span>
+            <h3 class="mt-5 text-3xl font-black">Resolver dudas frecuentes sin perder empatía ni trazabilidad.</h3>
+            <p class="mt-4 text-gray-600 leading-relaxed">Bots, bases de conocimiento, routing y asistencia al agente pueden operar como capacidades integradas. En una operación de ticketing, el punto de análisis es si estas capacidades permitirían responder preguntas repetitivas, guiar autoservicio, resumir interacciones y dar apoyo contextual cuando se requiere escalamiento.</p>
+            <div class="mt-6 grid md:grid-cols-3 gap-3">
+              <div class="bg-white rounded-2xl p-4 font-bold">Virtual agents</div>
+              <div class="bg-white rounded-2xl p-4 font-bold">Knowledge</div>
+              <div class="bg-white rounded-2xl p-4 font-bold">Agent Copilot</div>
+            </div>
+            <a class="inline-flex mt-5 text-sm font-black text-[#0050a4] hover:underline" target="_blank" href="https://www.genesys.com/capabilities/ai-and-automation">Fuente: Genesys · AI and Automation</a>
+          </div>
+          <div class="topic-panel" id="gmsg">
+            <span class="pill px-3 py-1 rounded-full text-xs font-black">Digital Messaging + WhatsApp</span>
+            <h3 class="mt-5 text-3xl font-black">Llevar resolución al canal donde el fan ya conversa.</h3>
+            <p class="mt-4 text-gray-600 leading-relaxed">Las capacidades de mensajería digital permiten implementar agentes virtuales o chatbots en canales como WhatsApp y Apple Messages for Business para responder preguntas comunes, orientar autoservicio y transferir al recurso adecuado. Para el diagnóstico, esta referencia ayuda a evaluar la cobertura de dudas de preventa, estatus de boletos, cambios, accesos y seguimiento postventa.</p>
+            <div class="mt-6 grid md:grid-cols-3 gap-3">
+              <div class="bg-white rounded-2xl p-4 font-bold">WhatsApp</div>
+              <div class="bg-white rounded-2xl p-4 font-bold">Apple Messages</div>
+              <div class="bg-white rounded-2xl p-4 font-bold">Handoff humano</div>
+            </div>
+            <a class="inline-flex mt-5 text-sm font-black text-[#0050a4] hover:underline" target="_blank" href="https://www.genesys.com/es-mx/capabilities/messaging-apps">Fuente: Genesys · Mensajería unificada</a>
+          </div>
+          <div class="topic-panel" id="gsocial">
+            <span class="pill px-3 py-1 rounded-full text-xs font-black">Genesys Cloud Social</span>
+            <h3 class="mt-5 text-3xl font-black">Transformar redes sociales en una operación medible.</h3>
+            <p class="mt-4 text-gray-600 leading-relaxed">Las capacidades de social care permiten monitorear keywords, cuentas y hashtags; analizar sentimiento con IA; y responder desde una lógica de routing y colas. Para una marca con alto volumen público, esta referencia permite evaluar priorización, consistencia operativa y trazabilidad de conversaciones sociales.</p>
+            <div class="mt-6 grid md:grid-cols-3 gap-3">
+              <div class="bg-white rounded-2xl p-4 font-bold">Social listening</div>
+              <div class="bg-white rounded-2xl p-4 font-bold">Sentiment analysis</div>
+              <div class="bg-white rounded-2xl p-4 font-bold">Colas y SLA</div>
+            </div>
+            <a class="inline-flex mt-5 text-sm font-black text-[#0050a4] hover:underline" target="_blank" href="https://www.genesys.com/resources/genesys-cloud-social-product-overview">Fuente: Genesys · Cloud Social</a>
+          </div>
+          <div class="topic-panel" id="grouting">
+            <span class="pill px-3 py-1 rounded-full text-xs font-black">Predictive Routing + Workforce Engagement</span>
+            <h3 class="mt-5 text-3xl font-black">Priorizar mejor cuando la demanda supera la operación normal.</h3>
+            <p class="mt-4 text-gray-600 leading-relaxed">El enrutamiento predictivo usa IA para analizar puntos de datos y conectar clientes con agentes con mayor probabilidad de resolver adecuadamente una interacción. En eventos masivos, esta capacidad sirve como referencia para revisar priorización de casos críticos, tiempos de atención y uso de capacidad operativa.</p>
+            <div class="mt-6 grid md:grid-cols-3 gap-3">
+              <div class="bg-white rounded-2xl p-4 font-bold">Prioridad por intención</div>
+              <div class="bg-white rounded-2xl p-4 font-bold">Mejor agente</div>
+              <div class="bg-white rounded-2xl p-4 font-bold">Optimización KPI</div>
+            </div>
+            <a class="inline-flex mt-5 text-sm font-black text-[#0050a4] hover:underline" target="_blank" href="https://www.genesys.com/es-mx/capabilities/automated-routing">Fuente: Genesys · Enrutamiento predictivo</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="casos" class="glass rounded-[2rem] p-6 md:p-8">
+      <div class="mb-8">
+        <p class="text-sm font-black text-[#0050a4] uppercase tracking-wider">Casos de referencia Genesys</p>
+        <h2 class="mt-3 text-3xl md:text-4xl font-black">Referencias de organizaciones con comunidades, servicios digitales y operación de alto volumen.</h2>
+        <p class="mt-4 text-gray-600 max-w-4xl">Estos casos no se presentan como comparación directa con Ticketmaster. Se incluyen únicamente como referencias públicas para observar cómo otras organizaciones han abordado retos de autoservicio, continuidad operativa, eficiencia y experiencia en contextos de alto volumen.</p>
+      </div>
+      <div class="grid lg:grid-cols-3 gap-5">
+        <article class="bg-white rounded-3xl p-6 border border-gray-100 hover:shadow-xl transition">
+          <span class="pill px-3 py-1 rounded-full text-xs font-black">Media & Entertainment</span>
+          <h3 class="mt-4 text-2xl font-black">Astro Malaysia</h3>
+          <p class="mt-3 text-gray-600">Astro migró a Genesys Cloud para equilibrar experiencias digitales y humanas, mejorar routing, forecasting y continuidad operativa. El caso reporta 27% de mejora en satisfacción del cliente, 20% de incremento en adopción de autoservicio digital y 30% de reducción en costos de mantenimiento IT.</p>
+          <div class="mt-5 grid grid-cols-3 gap-2 text-center">
+            <div class="rounded-2xl bg-blue-50 p-3"><p class="font-black text-[#0050a4]">+27%</p><p class="text-xs text-gray-600">CSAT</p></div>
+            <div class="rounded-2xl bg-blue-50 p-3"><p class="font-black text-[#0050a4]">+20%</p><p class="text-xs text-gray-600">Self-service</p></div>
+            <div class="rounded-2xl bg-blue-50 p-3"><p class="font-black text-[#0050a4]">-30%</p><p class="text-xs text-gray-600">IT cost</p></div>
+          </div>
+          <a class="inline-flex mt-5 text-sm font-black text-[#0050a4] hover:underline" target="_blank" href="https://www.genesys.com/customer-stories/astro-malaysia">Fuente: Genesys · Astro Malaysia</a>
+        </article>
+        <article class="bg-white rounded-3xl p-6 border border-gray-100 hover:shadow-xl transition">
+          <span class="pill px-3 py-1 rounded-full text-xs font-black">Fan Experience / Sports Retail</span>
+          <h3 class="mt-4 text-2xl font-black">Fanatics</h3>
+          <p class="mt-3 text-gray-600">Fanatics usa Genesys Cloud CX para mejorar la experiencia de fans y empleados, optimizar eficiencia del contact center y habilitar una operación global. El caso reporta reducción de 13% en AHT, incremento de 8% en FCR, 9% de ahorro en costos IT y reducción de hasta 10 semanas en tiempos de despliegue.</p>
+          <div class="mt-5 grid grid-cols-4 gap-2 text-center">
+            <div class="rounded-2xl bg-orange-50 p-3"><p class="font-black text-[#b45309]">-13%</p><p class="text-xs text-gray-600">AHT</p></div>
+            <div class="rounded-2xl bg-orange-50 p-3"><p class="font-black text-[#b45309]">+8%</p><p class="text-xs text-gray-600">FCR</p></div>
+            <div class="rounded-2xl bg-orange-50 p-3"><p class="font-black text-[#b45309]">-9%</p><p class="text-xs text-gray-600">IT cost</p></div>
+            <div class="rounded-2xl bg-orange-50 p-3"><p class="font-black text-[#b45309]">10 sem.</p><p class="text-xs text-gray-600">Deploy</p></div>
+          </div>
+          <a class="inline-flex mt-5 text-sm font-black text-[#0050a4] hover:underline" target="_blank" href="https://www.genesys.com/customer-stories/fanatics">Fuente: Genesys · Fanatics</a>
+        </article>
+        <article class="bg-white rounded-3xl p-6 border border-gray-100 hover:shadow-xl transition">
+          <span class="pill px-3 py-1 rounded-full text-xs font-black">Digital Entertainment / Online Gaming</span>
+          <h3 class="mt-4 text-2xl font-black">BetFlag</h3>
+          <p class="mt-3 text-gray-600">BetFlag modernizó su contact center con Genesys Cloud para operar con una plataforma cloud escalable y modular. El caso destaca trabajo remoto habilitado, gestión de datos más simple, retiro de tecnologías legacy y capacidad de escalar para crecimiento futuro.</p>
+          <div class="mt-5 grid grid-cols-2 gap-2 text-center">
+            <div class="rounded-2xl bg-emerald-50 p-3"><p class="font-black text-emerald-700">Cloud</p><p class="text-xs text-gray-600">Escalable</p></div>
+            <div class="rounded-2xl bg-emerald-50 p-3"><p class="font-black text-emerald-700">Self-service</p><p class="text-xs text-gray-600">Capacidad</p></div>
+          </div>
+          <a class="inline-flex mt-5 text-sm font-black text-[#0050a4] hover:underline" target="_blank" href="https://www.genesys.com/customer-stories/betflag">Fuente: Genesys · BetFlag</a>
+        </article>
+      </div>
+    </section>
+
+    <section id="fuentes" class="glass rounded-[2rem] p-6 md:p-8">
+      <div class="mb-6">
+        <p class="text-sm font-black text-[#0050a4] uppercase tracking-wider">Fuentes consultables</p>
+        <h2 class="mt-3 text-3xl font-black">Datos y referencias para validación.</h2>
+        <p class="mt-4 text-gray-600 max-w-4xl">Cada fuente abre en una nueva pestaña para que el lector pueda validar los datos, prácticas de industria y capacidades mencionadas en el diagnóstico.</p>
+      </div>
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <a target="_blank" href="https://www.gob.mx/profeco/prensa/291010" class="bg-white rounded-3xl p-5 border border-gray-100 hover:shadow-xl transition"><p class="font-black">Profeco · Conciliaexprés</p><p class="mt-2 text-sm text-gray-600">Ticketmaster México se incorpora al mecanismo para agilizar soluciones a cargos, entradas y reembolsos.</p></a>
+        <a target="_blank" href="https://help.ticketmaster.com.mx/hc/es-mx/articles/7003373287569--C%C3%B3mo-contactarnos" class="bg-white rounded-3xl p-5 border border-gray-100 hover:shadow-xl transition"><p class="font-black">Ticketmaster MX · Contacto</p><p class="mt-2 text-sm text-gray-600">Centro de ayuda, artículos y generación de tickets por formulario/correo.</p></a>
+        <a target="_blank" href="https://elpais.com/mexico/2026-05-21/a-la-guerra-digital-por-un-boleto-para-la-final-de-pumas-vs-cruz-azul.html" class="bg-white rounded-3xl p-5 border border-gray-100 hover:shadow-xl transition"><p class="font-black">El País · Alta demanda digital</p><p class="mt-2 text-sm text-gray-600">Cobertura sobre competencia digital, fallas técnicas, errores de pago y reventa en eventos masivos.</p></a>
+        <a target="_blank" href="https://support.axs.com/hc/en-us/articles/200745935-What-s-a-Waiting-Room" class="bg-white rounded-3xl p-5 border border-gray-100 hover:shadow-xl transition"><p class="font-black">AXS · Waiting Room</p><p class="mt-2 text-sm text-gray-600">Ejemplo de sala de espera virtual para eventos de alta demanda.</p></a>
+        <a target="_blank" href="https://support.axs.com/hc/en-us/articles/360033079634-How-do-I-contact-Fan-Support" class="bg-white rounded-3xl p-5 border border-gray-100 hover:shadow-xl transition"><p class="font-black">AXS · Live Chat</p><p class="mt-2 text-sm text-gray-600">Ejemplo de soporte por live chat para fans.</p></a>
+        <a target="_blank" href="https://aws.amazon.com/blogs/architecture/build-a-virtual-waiting-room-with-amazon-dynamodb-and-aws-lambda-at-seatgeek/" class="bg-white rounded-3xl p-5 border border-gray-100 hover:shadow-xl transition"><p class="font-black">AWS · SeatGeek</p><p class="mt-2 text-sm text-gray-600">Referencia de arquitectura para virtual waiting room en ticketing.</p></a>
+        <a target="_blank" href="https://www.genesys.com/capabilities/customer-journey-management" class="bg-white rounded-3xl p-5 border border-gray-100 hover:shadow-xl transition"><p class="font-black">Genesys · Journey Management</p><p class="mt-2 text-sm text-gray-600">Capacidades de journey analytics, journey orchestration y predictive engagement.</p></a>
+        <a target="_blank" href="https://www.genesys.com/es-mx/capabilities/messaging-apps" class="bg-white rounded-3xl p-5 border border-gray-100 hover:shadow-xl transition"><p class="font-black">Genesys · Mensajería</p><p class="mt-2 text-sm text-gray-600">Mensajería unificada, WhatsApp, Apple Messages y agentes virtuales.</p></a>
+        <a target="_blank" href="https://www.genesys.com/resources/genesys-cloud-social-product-overview" class="bg-white rounded-3xl p-5 border border-gray-100 hover:shadow-xl transition"><p class="font-black">Genesys · Cloud Social</p><p class="mt-2 text-sm text-gray-600">Social listening, sentiment analysis, routing y gestión de interacciones sociales.</p></a>
+        <a target="_blank" href="https://www.tiktok.com/@ticketmaster_mx/video/7395622105770986757?lang=es" class="bg-white rounded-3xl p-5 border border-gray-100 hover:shadow-xl transition"><p class="font-black">Ticketmaster MX · TikTok botón de ayuda</p><p class="mt-2 text-sm text-gray-600">Referencia cualitativa sobre comunicación pública del botón de ayuda y percepción social del canal.</p></a>
+        <a target="_blank" href="https://www.genesys.com/customer-stories/astro-malaysia" class="bg-white rounded-3xl p-5 border border-gray-100 hover:shadow-xl transition"><p class="font-black">Genesys · Astro Malaysia</p><p class="mt-2 text-sm text-gray-600">Media & entertainment: autoservicio digital, satisfacción, forecasting y continuidad operativa.</p></a>
+        <a target="_blank" href="https://www.genesys.com/customer-stories/fanatics" class="bg-white rounded-3xl p-5 border border-gray-100 hover:shadow-xl transition"><p class="font-black">Genesys · Fanatics</p><p class="mt-2 text-sm text-gray-600">Fan experience: eficiencia, FCR, AHT, costos IT y operación global.</p></a>
+        <a target="_blank" href="https://www.genesys.com/customer-stories/betflag" class="bg-white rounded-3xl p-5 border border-gray-100 hover:shadow-xl transition"><p class="font-black">Genesys · BetFlag</p><p class="mt-2 text-sm text-gray-600">Digital entertainment/gaming: cloud contact center, self-service, escalabilidad y retiro de legacy.</p></a>
+      </div>
+    </section>
+
+    <section id="ruta" class="glass rounded-[2rem] p-6 md:p-8">
+      <div class="grid lg:grid-cols-3 gap-8">
+        <div>
+          <p class="text-sm font-black text-[#0050a4] uppercase tracking-wider">Ruta de evolución sugerida</p>
+          <h2 class="mt-3 text-3xl font-black">Una ruta gradual, centrada en confianza y resolución.</h2>
+          <p class="mt-4 text-gray-600 leading-relaxed">No se plantea como reemplazo de canales actuales, sino como una evolución para que cada interacción tenga contexto, trazabilidad y siguiente mejor acción.</p>
+        </div>
+        <div class="lg:col-span-2 grid md:grid-cols-3 gap-4">
+          <article class="bg-white rounded-3xl p-5 border border-gray-100">
+            <span class="text-xs font-black text-[#0050a4]">FASE 1 · CLARIDAD</span>
+            <h3 class="mt-3 text-xl font-black">Reducir incertidumbre</h3>
+            <ul class="mt-4 space-y-2 text-sm text-gray-600">
+              <li>• Centro de ayuda contextual por evento</li>
+              <li>• Asistencia conversacional para preguntas frecuentes</li>
+              <li>• Estatus visible de solicitudes</li>
+            </ul>
+          </article>
+          <article class="bg-white rounded-3xl p-5 border border-gray-100">
+            <span class="text-xs font-black text-[#0050a4]">FASE 2 · CONTINUIDAD</span>
+            <h3 class="mt-3 text-xl font-black">Conectar canales</h3>
+            <ul class="mt-4 space-y-2 text-sm text-gray-600">
+              <li>• Historial único de interacción</li>
+              <li>• Handoff con contexto a humano</li>
+              <li>• Social care priorizado por intención</li>
+            </ul>
+          </article>
+          <article class="bg-white rounded-3xl p-5 border border-gray-100">
+            <span class="text-xs font-black text-[#0050a4]">FASE 3 · ANTICIPACIÓN</span>
+            <h3 class="mt-3 text-xl font-black">Prevenir escalamiento</h3>
+            <ul class="mt-4 space-y-2 text-sm text-gray-600">
+              <li>• Journey analytics</li>
+              <li>• Alertas proactivas</li>
+              <li>• Priorización predictiva en picos</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="rounded-[2rem] p-8 md:p-10 bg-[#06172f] text-white">
+      <div class="max-w-5xl">
+        <p class="text-sm font-black text-[#8de3ff] uppercase tracking-wider">Cierre para conversación ejecutiva</p>
+        <h2 class="mt-3 text-3xl md:text-4xl font-black">La experiencia ideal no elimina la alta demanda; la hace más comprensible, justa y recuperable.</h2>
+        <p class="mt-5 text-blue-100 leading-relaxed">En entretenimiento masivo siempre existirán picos, filas, disponibilidad limitada y momentos de frustración. La diferencia operativa está en cómo la organización explica, acompaña, resuelve y aprende de cada interacción antes, durante y después de la compra. Este diagnóstico queda sujeto a la validación de Ticketmaster México, así como a su punto de vista sobre las señales detectadas, prioridades internas, capacidades existentes y restricciones operativas.</p>
+      </div>
+    </section>
+      <section class="rounded-[2rem] p-8 md:p-10 bg-white border border-gray-100 shadow-sm">
+      <div class="max-w-5xl">
+        <p class="text-sm font-black text-[#0050a4] uppercase tracking-wider">Nota de alcance</p>
+        <h2 class="mt-3 text-2xl md:text-3xl font-black">Este documento es un diagnóstico preliminar para conversación y validación.</h2>
+        <p class="mt-4 text-gray-600 leading-relaxed">Los hallazgos se basan en señales públicas, observación de canales digitales disponibles y fuentes consultables. No sustituyen información interna de operación, métricas reales de atención, volúmenes de contacto, SLAs, arquitectura tecnológica ni prioridades estratégicas de Ticketmaster México.</p>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const perceptionCtx = document.getElementById('perceptionChart');
+    new Chart(perceptionCtx, {
+      type: 'bar',
+      data: {
+        labels: ['Preventa', 'Venta', 'Postventa'],
+        datasets: [{
+          label: 'Intensidad de fricción percibida',
+          data: [4.3, 4.0, 4.5],
+          backgroundColor: ['rgba(239,68,68,.70)', 'rgba(245,158,11,.75)', 'rgba(0,80,164,.70)'],
+          borderRadius: 14
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: { suggestedMin: 0, suggestedMax: 5, ticks: { stepSize: 1 }, grid: { color: 'rgba(17,24,39,.08)' } },
+          x: { grid: { display: false }, ticks: { font: { weight: '700' } } }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: ctx => `Señal cualitativa: ${ctx.raw}/5` } }
+        }
+      }
+    });
+
+    const ctx = document.getElementById('maturityChart');
+    new Chart(ctx, {
+      type: 'radar',
+      data: {
+        labels: ['Soporte visible', 'Autoservicio', 'Asistencia conversacional', 'Proactividad', 'Social care', 'Continuidad', 'Visibilidad journey', 'Resolución trazable'],
+        datasets: [{
+          label: 'Madurez observada',
+          data: [1, 2.5, 0.5, 0.5, 1.5, 1, 0.5, 1.5],
+          fill: true,
+          backgroundColor: 'rgba(0, 80, 164, 0.14)',
+          borderColor: '#0050a4',
+          pointBackgroundColor: '#ff4f1f',
+          pointBorderColor: '#fff',
+          pointHoverBackgroundColor: '#fff',
+          pointHoverBorderColor: '#0050a4'
+        }, {
+          label: 'Práctica objetivo en entretenimiento masivo',
+          data: [3.5, 4, 4.5, 4.2, 4, 4.5, 4.5, 4.5],
+          fill: true,
+          backgroundColor: 'rgba(255, 79, 31, 0.10)',
+          borderColor: '#ff4f1f',
+          pointBackgroundColor: '#0050a4',
+          pointBorderColor: '#fff'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          r: {
+            suggestedMin: 0,
+            suggestedMax: 5,
+            ticks: { stepSize: 1, backdropColor: 'transparent' },
+            grid: { color: 'rgba(17,24,39,.10)' },
+            angleLines: { color: 'rgba(17,24,39,.10)' },
+            pointLabels: { font: { size: 12, weight: '700' }, color: '#374151' }
+          }
+        },
+        plugins: {
+          legend: { position: 'bottom', labels: { usePointStyle: true, font: { weight: '700' } } }
+        }
+      }
+    });
+
+    const buttons = document.querySelectorAll('.topic-btn');
+    const panels = document.querySelectorAll('.topic-panel');
+    buttons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        buttons.forEach(b => b.classList.remove('active'));
+        panels.forEach(p => p.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(btn.dataset.topic).classList.add('active');
+      });
+    });
+  </script>
+</body>
+</html>
